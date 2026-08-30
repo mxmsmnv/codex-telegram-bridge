@@ -1,0 +1,23 @@
+[project]
+name = "codex-telegram-bridge"
+version = "0.1.0"
+description = "Local-first Telegram notifications and bounded confirmations for Codex"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Maxim Semenov" }]
+keywords = ["codex", "telegram", "automation", "notifications", "macos"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.urls]
+Homepage = "https://github.com/mxmsmnv/codex-telegram-bridge"
+Issues = "https://github.com/mxmsmnv/codex-telegram-bridge/issues"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
