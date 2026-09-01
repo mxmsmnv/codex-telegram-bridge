@@ -566,6 +566,36 @@ def answer_callback(token: str, callback_id: str, text: str) -> None:
     )
 
 
+def pending_question(pending_id: str) -> str:
+    def read_question(state: dict[str, Any]) -> str:
+        item = state.get("pending", {}).get(pending_id, {})
+        return str(item.get("question") or "")
+
+    return update_state(read_question)
+
+
+def confirmation_receipt(action: str, question: str) -> str:
+    russian = is_russian_text(question)
+    if action == "yes":
+        return (
+            "✅ Принято. Ответ «Да» передан в Codex."
+            if russian
+            else "✅ Accepted. The Yes response was sent to Codex."
+        )
+    return (
+        "⏸ Принято. Ответ «Нет» передан в Codex."
+        if russian
+        else "⏸ Accepted. The No response was sent to Codex."
+    )
+
+
+def send_confirmation_receipt(action: str, pending_id: str) -> None:
+    try:
+        send_telegram(confirmation_receipt(action, pending_question(pending_id)))
+    except Exception as error:  # noqa: BLE001 - the Codex reply is already queued
+        log_event(f"confirmation receipt failed: {type(error).__name__}: {error}")
+
+
 def process_update(token: str, allowed_chat_id: str, update: dict[str, Any]) -> None:
     callback = update.get("callback_query") or {}
     if callback:
@@ -579,8 +609,10 @@ def process_update(token: str, allowed_chat_id: str, update: dict[str, Any]) -> 
             answer_callback(token, str(callback.get("id") or ""), "Неизвестная команда")
             return
         try:
-            dispatch_to_codex(match.group(1), match.group(2))
+            action = match.group(1)
+            pending_id = dispatch_to_codex(action, match.group(2))
             answer_callback(token, str(callback.get("id") or ""), "Отправлено в Codex")
+            send_confirmation_receipt(action, pending_id)
         except (LookupError, RuntimeError, OSError) as error:
             answer_callback(token, str(callback.get("id") or ""), str(error))
         return
@@ -593,9 +625,11 @@ def process_update(token: str, allowed_chat_id: str, update: dict[str, Any]) -> 
     if action is None:
         return
     try:
-        dispatch_to_codex(*action)
+        pending_id = dispatch_to_codex(*action)
     except (LookupError, RuntimeError, OSError) as error:
         send_telegram(f"⚠️ {error}")
+    else:
+        send_confirmation_receipt(action[0], pending_id)
 
 
 def listen() -> int:
@@ -641,6 +675,9 @@ def notify(raw_notification: str) -> int:
         if notification.get("type") != "agent-turn-complete":
             return 0
         text, keyboard = build_notification(notification)
+        if keyboard is None:
+            log_event("suppressed routine turn-complete notification")
+            return 0
         send_telegram(text, reply_markup=keyboard)
     except Exception as error:  # noqa: BLE001 - notification hooks must fail safely
         log_event(f"notify error: {type(error).__name__}: {error}")

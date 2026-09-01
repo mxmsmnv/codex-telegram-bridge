@@ -1,8 +1,8 @@
 # Codex Telegram Bridge
 
-A small, local-first bridge that sends Codex turn results to a private Telegram
-bot and relays bounded **Yes / No** answers back into the exact running Codex
-task.
+A small, local-first bridge that sends actionable Codex confirmation requests
+to a private Telegram bot and relays bounded **Yes / No** answers back into the
+exact running Codex task.
 
 It is useful when Codex is working on a Mac while you are away from the desk:
 you can receive a concise result, approve or decline the pending action from
@@ -15,13 +15,16 @@ Telegram, and let the same task continue.
 
 ## What it does
 
-- receives Codex `agent-turn-complete` notify payloads;
+- receives Codex `agent-turn-complete` notify payloads and suppresses routine
+  completion messages and technical payloads;
 - removes absolute paths, commit hashes, file citations, and relay boilerplate;
 - formats results for a phone-sized Telegram view;
 - recognizes Russian and English confirmation questions and localizes the
   `✅ Yes` / `⛔ No` buttons to the message language;
 - accepts replies only from one private Telegram chat;
 - routes the answer into the exact originating Codex task;
+- posts a persistent acceptance receipt after Telegram sends the answer to
+  Codex, so mobile users do not have to rely on a short-lived popup;
 - expires pending confirmations after 24 hours;
 - stores the Telegram token and allowed chat ID in macOS Keychain;
 - keeps runtime state and logs outside the repository.
@@ -100,6 +103,7 @@ python3 -m unittest tests/test_codex_telegram_bridge.py
    private chat.
 5. The listener runs `codex queue --thread … --message …`.
 6. The pending record is consumed only after Codex accepts the queued message.
+7. Telegram receives a persistent confirmation that the answer was accepted.
 
 A newer confirmation in the same Codex task supersedes an older unanswered
 one. Plain replies target the newest visible pending question. Exact fallback

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -133,7 +134,7 @@ class TelegramBridgeTests(unittest.TestCase):
             text,
         )
 
-    def test_successful_callback_does_not_send_extra_chat_message(self):
+    def test_successful_callback_sends_persistent_receipt(self):
         bridge.store_pending(
             "A1B2C3D4",
             thread_id="thread-123",
@@ -148,13 +149,15 @@ class TelegramBridgeTests(unittest.TestCase):
                 "message": {"chat": {"id": "42"}},
             }
         }
-        with mock.patch.object(bridge, "dispatch_to_codex"), mock.patch.object(
+        with mock.patch.object(
+            bridge, "dispatch_to_codex", return_value="A1B2C3D4"
+        ), mock.patch.object(
             bridge, "answer_callback"
         ) as answer, mock.patch.object(bridge, "send_telegram") as send:
             bridge.process_update("token", "42", update)
 
         answer.assert_called_once_with("token", "callback-1", "Отправлено в Codex")
-        send.assert_not_called()
+        send.assert_called_once_with("✅ Принято. Ответ «Да» передан в Codex.")
 
     def test_english_confirmation_uses_english_ui(self):
         text, keyboard = bridge.build_notification(
@@ -177,14 +180,39 @@ class TelegramBridgeTests(unittest.TestCase):
         self.assertEqual(keyboard["inline_keyboard"][0][0]["text"], "✅ Yes")
         self.assertEqual(keyboard["inline_keyboard"][0][1]["text"], "⛔ No")
 
-    def test_successful_plain_reply_does_not_send_extra_chat_message(self):
+    def test_successful_plain_reply_sends_persistent_receipt(self):
         update = {"message": {"chat": {"id": "42"}, "text": "да"}}
-        with mock.patch.object(bridge, "dispatch_to_codex"), mock.patch.object(
+        bridge.store_pending(
+            "A1B2C3D4",
+            thread_id="thread-123",
+            turn_id="turn-456",
+            cwd=self.temp_dir.name,
+            question="Подтверждаешь отправку заявки?",
+        )
+        with mock.patch.object(
+            bridge, "dispatch_to_codex", return_value="A1B2C3D4"
+        ), mock.patch.object(
             bridge, "send_telegram"
         ) as send:
             bridge.process_update("token", "42", update)
 
-        send.assert_not_called()
+        send.assert_called_once_with("✅ Принято. Ответ «Да» передан в Codex.")
+
+    def test_english_negative_reply_receipt_is_localized(self):
+        bridge.store_pending(
+            "A1B2C3D4",
+            thread_id="thread-123",
+            turn_id="turn-456",
+            cwd=self.temp_dir.name,
+            question="Confirm final submission?",
+        )
+        update = {"message": {"chat": {"id": "42"}, "text": "no"}}
+        with mock.patch.object(
+            bridge, "dispatch_to_codex", return_value="A1B2C3D4"
+        ), mock.patch.object(bridge, "send_telegram") as send:
+            bridge.process_update("token", "42", update)
+
+        send.assert_called_once_with("⏸ Accepted. The No response was sent to Codex.")
 
     def test_new_confirmation_supersedes_older_one_in_same_thread(self):
         bridge.store_pending(
@@ -218,6 +246,34 @@ class TelegramBridgeTests(unittest.TestCase):
         self.assertIn("Заявка отправлена и записана в трекер.", text)
         self.assertTrue(text.startswith("✅ Готово"))
         self.assertIsNone(keyboard)
+
+    def test_notify_suppresses_routine_completed_result(self):
+        notification = {
+            "type": "agent-turn-complete",
+            "cwd": "/tmp/example-project",
+            "last-assistant-message": '{"description":"technical suggestion"}',
+        }
+        with mock.patch.object(bridge, "send_telegram") as send:
+            result = bridge.notify(json.dumps(notification))
+
+        self.assertEqual(result, 0)
+        send.assert_not_called()
+
+    def test_notify_keeps_actionable_confirmation(self):
+        notification = {
+            "type": "agent-turn-complete",
+            "thread-id": "thread-123",
+            "turn-id": "turn-456",
+            "cwd": "/tmp/example-project",
+            "last-assistant-message": "Подтверждаешь отправку заявки?",
+        }
+        with mock.patch.object(bridge, "send_telegram") as send:
+            result = bridge.notify(json.dumps(notification))
+
+        self.assertEqual(result, 0)
+        send.assert_called_once()
+        self.assertIn("Нужен ответ", send.call_args.args[0])
+        self.assertIsNotNone(send.call_args.kwargs["reply_markup"])
 
     def test_plain_answer_targets_newest_pending_question(self):
         bridge.store_pending(
