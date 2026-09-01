@@ -8,7 +8,8 @@ fi
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BRIDGE_PATH="$SCRIPT_DIR/codex_telegram_bridge.py"
-USER_HOME=$(python3 -c 'from pathlib import Path; print(Path.home())')
+PYTHON_BIN=$(command -v python3)
+USER_HOME=$($PYTHON_BIN -c 'from pathlib import Path; print(Path.home())')
 USER_NAME=$(id -un)
 USER_ID=$(id -u)
 LABEL="com.mxmsmnv.codex-telegram-bridge"
@@ -21,12 +22,12 @@ if launchctl print "gui/$USER_ID/$LABEL" >/dev/null 2>&1; then
   launchctl bootout "gui/$USER_ID/$LABEL"
 fi
 
-python3 - "$PLIST_PATH" "$BRIDGE_PATH" "$USER_HOME" "$USER_NAME" "$LOG_PATH" <<'PY'
+$PYTHON_BIN - "$PLIST_PATH" "$BRIDGE_PATH" "$USER_HOME" "$USER_NAME" "$LOG_PATH" "$PYTHON_BIN" <<'PY'
 import plistlib
 import sys
 from pathlib import Path
 
-plist_path, bridge_path, home, user, log_path = sys.argv[1:]
+plist_path, bridge_path, home, user, log_path, python_bin = sys.argv[1:]
 payload = {
     "Label": "com.mxmsmnv.codex-telegram-bridge",
     "ProgramArguments": [
@@ -36,7 +37,7 @@ payload = {
         f"USER={user}",
         f"LOGNAME={user}",
         "PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-        "/usr/bin/python3",
+        python_bin,
         bridge_path,
         "listen",
     ],

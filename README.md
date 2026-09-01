@@ -86,6 +86,9 @@ The installer creates a per-user LaunchAgent at:
 ~/Library/LaunchAgents/com.mxmsmnv.codex-telegram-bridge.plist
 ```
 
+It records the active `python3` executable in the LaunchAgent, so the listener
+uses the same supported Python 3.10+ runtime that was used for installation.
+
 ### 5. Test
 
 ```bash
