@@ -30,6 +30,23 @@ class TelegramBridgeTests(unittest.TestCase):
             patcher.stop()
         self.temp_dir.cleanup()
 
+    def test_resolve_codex_binary_supports_current_desktop_bundle_without_path(self):
+        current_bundle = (
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/"
+            "CodexCLI.app/Contents/MacOS/codex"
+        )
+        with (
+            mock.patch.dict(bridge.os.environ, {}, clear=True),
+            mock.patch.object(bridge.shutil, "which", return_value=None),
+            mock.patch.object(
+                bridge.Path,
+                "is_file",
+                autospec=True,
+                side_effect=lambda path: str(path) == current_bundle,
+            ),
+        ):
+            self.assertEqual(str(bridge.resolve_codex_binary()), current_bundle)
+
     def test_confirmation_detection_is_bounded(self):
         self.assertTrue(bridge.needs_confirmation("Подтверждаешь передачу адреса?"))
         self.assertTrue(bridge.needs_confirmation("Confirm final submission?"))

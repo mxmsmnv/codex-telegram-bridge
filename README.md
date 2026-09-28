@@ -142,8 +142,8 @@ Optional environment variables:
 | `CODEX_TELEGRAM_CHAT_SERVICE` | Override the Keychain chat-ID service name |
 
 The default executable discovery order is `CODEX_BINARY`, `codex` on `PATH`,
-then the Codex desktop bundle at
-`/Applications/ChatGPT.app/Contents/Resources/codex`.
+the current bundled `CodexCLI.app` executable, and then the legacy bundled
+Codex executable path.
 
 ## Uninstall
 

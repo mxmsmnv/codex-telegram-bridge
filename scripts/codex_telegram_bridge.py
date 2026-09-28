@@ -37,6 +37,8 @@ def resolve_codex_binary() -> Path:
     candidates = [
         override,
         shutil.which("codex"),
+        "/Applications/ChatGPT.app/Contents/Resources/codex-cli/"
+        "CodexCLI.app/Contents/MacOS/codex",
         "/Applications/ChatGPT.app/Contents/Resources/codex",
     ]
     for candidate in candidates:
