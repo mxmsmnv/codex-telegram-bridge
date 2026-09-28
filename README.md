@@ -102,8 +102,8 @@ python3 -m unittest tests/test_codex_telegram_bridge.py
 2. The bridge detects a confirmation question and stores a short-lived pending
    record containing the Codex thread ID and working directory.
 3. Telegram receives compact context, one actionable sentence, and two buttons.
-4. A button or plain `yes` / `no` reply is accepted only from the configured
-   private chat.
+4. A button or plain `yes` / `no` / `y` / `n` reply is accepted only from the
+   configured private chat. Russian `да` / `нет` / `д` / `н` also work.
 5. The listener runs `codex queue --thread … --message …`.
 6. The pending record is consumed only after Codex accepts the queued message.
 7. Telegram receives a persistent confirmation that the answer was accepted.
@@ -123,7 +123,8 @@ commands are also available:
 - Runtime state is written with user-only permissions under
   `~/.codex/telegram-bridge/`.
 - Logs are stored under `~/.codex/log/`.
-- The listener accepts only `yes` or `no` for an existing pending question.
+- The listener accepts only the documented yes/no variants for an existing
+  pending question.
 - Answers are bound to a specific Codex task and expire after 24 hours.
 - Passwords, OTPs, CAPTCHA values, tokens, addresses, and other critical
   secrets should never be placed in confirmation text.

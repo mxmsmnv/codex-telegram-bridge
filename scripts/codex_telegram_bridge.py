@@ -551,9 +551,9 @@ def parse_text_action(text: str) -> tuple[str, str | None] | None:
     match = re.fullmatch(r"/(yes|no)(?:\s+([A-Za-z0-9]+))?", normalized, re.I)
     if match:
         return match.group(1).lower(), match.group(2)
-    if normalized.casefold() in {"да", "yes", "подтверждаю"}:
+    if normalized.casefold() in {"да", "д", "yes", "y", "подтверждаю"}:
         return "yes", None
-    if normalized.casefold() in {"нет", "no", "отказываю"}:
+    if normalized.casefold() in {"нет", "н", "no", "n", "отказываю"}:
         return "no", None
     return None
 

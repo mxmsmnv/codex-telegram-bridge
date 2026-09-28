@@ -295,6 +295,14 @@ class TelegramBridgeTests(unittest.TestCase):
         self.assertEqual(pending_id, "E5F6A7B8")
         self.assertEqual(item["question"], "Новый вопрос?")
 
+    def test_single_letter_mobile_answers_are_accepted(self):
+        self.assertEqual(bridge.parse_text_action("y"), ("yes", None))
+        self.assertEqual(bridge.parse_text_action("Y"), ("yes", None))
+        self.assertEqual(bridge.parse_text_action("n"), ("no", None))
+        self.assertEqual(bridge.parse_text_action("N"), ("no", None))
+        self.assertEqual(bridge.parse_text_action("д"), ("yes", None))
+        self.assertEqual(bridge.parse_text_action("н"), ("no", None))
+
     def test_dispatch_queues_visible_message_into_active_thread(self):
         bridge.store_pending(
             "A1B2C3D4",
