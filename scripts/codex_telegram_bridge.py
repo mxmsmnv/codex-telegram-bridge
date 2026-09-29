@@ -433,8 +433,13 @@ def build_notification(notification: dict[str, Any]) -> tuple[str, dict[str, Any
     return "\n".join([heading, "", compact_result(assistant)]), None
 
 
-def latest_private_chat_id(token: str) -> tuple[str, str]:
-    payload = telegram_request(token, "getUpdates")
+def latest_private_chat_id(token: str, *, timeout: int = 0) -> tuple[str, str]:
+    payload = telegram_request(
+        token,
+        "getUpdates",
+        {"timeout": str(timeout)},
+        timeout=max(15, timeout + 5),
+    )
     for update in reversed(payload.get("result", [])):
         message = update.get("message") or update.get("edited_message") or {}
         chat = message.get("chat") or {}
@@ -448,24 +453,38 @@ def latest_private_chat_id(token: str) -> tuple[str, str]:
 
 
 def setup() -> int:
-    print("Telegram Bot Token будет сохранён только в macOS Keychain.")
-    token = getpass.getpass("Bot Token: ").strip()
+    try:
+        token = keychain_get(TOKEN_SERVICE)
+        print("Используется Telegram Bot Token из macOS Keychain.")
+    except subprocess.SubprocessError:
+        print("Telegram Bot Token будет сохранён только в macOS Keychain.")
+        token = getpass.getpass("Bot Token: ").strip()
     if not token:
         print("Token не введён.", file=sys.stderr)
         return 1
     try:
         bot = telegram_request(token, "getMe").get("result", {})
         print(f"Бот подтверждён: @{bot.get('username', 'unknown')}")
-        print("Откройте этого бота в Telegram, нажмите Start и отправьте /start.")
-        input("После этого нажмите Enter здесь: ")
-        chat_id, chat_label = latest_private_chat_id(token)
         keychain_set(TOKEN_SERVICE, token)
+        print("Откройте этого бота в Telegram, нажмите Start и отправьте /start.")
+        print("Ожидаю сообщение до 90 секунд; Enter нажимать не нужно.")
+        deadline = time.monotonic() + 90
+        while True:
+            try:
+                chat_id, chat_label = latest_private_chat_id(token, timeout=10)
+                break
+            except RuntimeError:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(
+                        "Личный чат не найден за 90 секунд. Отправьте боту /start "
+                        "и повторите --setup; токен уже сохранён в Keychain."
+                    )
         keychain_set(CHAT_SERVICE, chat_id)
         send_telegram("🔔 Telegram-мост Codex подключён.")
         print(f"Готово. Тест отправлен в личный чат: {chat_label}.")
         return 0
     except (RuntimeError, urllib.error.URLError, subprocess.SubprocessError) as error:
-        print(f"Настройка не завершена: {type(error).__name__}", file=sys.stderr)
+        print(f"Настройка не завершена: {error}", file=sys.stderr)
         return 1
 
 
