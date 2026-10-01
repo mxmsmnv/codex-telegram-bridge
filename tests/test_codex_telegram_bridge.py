@@ -55,9 +55,37 @@ class TelegramBridgeTests(unittest.TestCase):
                 "Подтверди одним «да»: загрузить резюме и отправить заявку."
             )
         )
+        self.assertTrue(
+            bridge.needs_confirmation(
+                "Жду ваше «да», чтобы нажать финальный Submit в Linde."
+            )
+        )
+        self.assertTrue(
+            bridge.needs_confirmation(
+                "Waiting for your yes before clicking final Submit."
+            )
+        )
         self.assertFalse(bridge.needs_confirmation("Заявка отправлена."))
         self.assertFalse(bridge.needs_confirmation("Подтверждение вижу, продолжаю работу."))
         self.assertFalse(bridge.needs_confirmation("Что делать дальше?"))
+
+    def test_waiting_for_yes_gate_is_sent_with_buttons(self):
+        text, keyboard = bridge.build_notification(
+            {
+                "type": "agent-turn-complete",
+                "thread-id": "thread-123",
+                "turn-id": "turn-456",
+                "cwd": "/tmp/example-project",
+                "last-assistant-message": (
+                    "Анкета Linde полностью заполнена и проверена. "
+                    "Жду ваше «да», чтобы нажать финальный Submit в Linde."
+                ),
+            }
+        )
+        self.assertIn("Нужен ответ", text)
+        self.assertIn("Жду ваше «да»", text)
+        self.assertIsNotNone(keyboard)
+        self.assertEqual(keyboard["inline_keyboard"][0][0]["text"], "✅ Да")
 
     def test_text_actions(self):
         self.assertEqual(bridge.parse_text_action("/yes A1B2C3D4"), ("yes", "A1B2C3D4"))

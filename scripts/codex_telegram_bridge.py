@@ -65,7 +65,9 @@ CONFIRMATION_RE = re.compile(
 
 CONFIRMATION_REQUEST_RE = re.compile(
     r"(?i)(?:\bподтверди(?:те)?\b|\bответь(?:те)?\s+(?:одним\s+)?[\u00ab\"]?(?:да|нет)|"
-    r"\bplease\s+confirm\b|\bconfirm\s+(?:by|that|whether)\b)"
+    r"\bжду\s+(?:(?:ваше|тво[её])\s+)?[\u00ab\"]?да[\u00bb\"]?|"
+    r"\bplease\s+confirm\b|\bconfirm\s+(?:by|that|whether)\b|"
+    r"\bwaiting\s+for\s+(?:your\s+)?yes\b)"
 )
 
 RELAY_ECHO_RE = re.compile(
